@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume Coach — New Analysis</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">RC</div>
+      <div>
+        <div class="brand-title">Resume Coach</div>
+        <div class="brand-sub">AI Career Workspace</div>
+      </div>
+    </div>
+    <a href="index.html" class="nav-link active"><span>1. New Analysis</span></a>
+    <a href="review.html" class="nav-link"><span>2. Resume Report</span></a>
+    <a href="interview.html" class="nav-link"><span>3. Mock Interview</span></a>
+    <a href="profile.html" class="nav-link">
+      <span>My Profile &amp; History</span>
+      <span class="nav-pill" id="historyCount">0</span>
+    </a>
+  </aside>
+
+  <main class="main wide">
+    <section class="hero">
+      <div>
+        <h1>Improve Your Resume &amp; Practice Interviews</h1>
+        <p>Get AI-powered resume feedback, find skill gaps for your target role, and practice with a personalized mock interview.</p>
+      </div>
+      <svg class="hero-art" viewBox="0 0 270 170" aria-hidden="true"><circle cx="150" cy="80" r="76" fill="#e6eefb"/><rect x="92" y="28" width="116" height="78" rx="6" fill="#1d3f73"/><rect x="99" y="35" width="102" height="64" rx="3" fill="#fff"/><text x="150" y="48" font-size="8" font-weight="700" text-anchor="middle" fill="#1d3f73">RESUME</text><circle cx="116" cy="62" r="7" fill="#2f6fc0"/><path d="M130 58h56M130 64h56M130 70h40M108 80h82M108 87h70" stroke="#b6c7e2" stroke-width="3" stroke-linecap="round"/><path d="M80 112h140l-8 8H88z" fill="#1d3f73"/><circle cx="188" cy="82" r="20" fill="#dbe9fb" fill-opacity=".7" stroke="#1d3f73" stroke-width="5"/><path d="M203 97l18 18" stroke="#1d3f73" stroke-width="7" stroke-linecap="round"/><path d="M52 128c-8-14-4-26 2-34 8 8 10 22-2 34zM44 128c-10-8-14-18-12-28 10 4 14 16 12 28z" fill="#3a9a5b"/><rect x="44" y="124" width="18" height="16" rx="3" fill="#e9eef6" stroke="#9fb3d1"/><path d="M20 148h230" stroke="#c9d7ec" stroke-width="2"/></svg>
+    </section>
+
+    <section class="feat-grid">
+      <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6"/></svg><div><b>Review Resume</b><span>Score, strengths &amp; fixes</span></div></div>
+      <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-9M12 20V5M19 20v-7"/></svg><div><b>Find Skill Gaps</b><span>Role-based analysis</span></div></div>
+      <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4zM8 9h8M8 12h5"/></svg><div><b>Mock Interview</b><span>5 questions with scoring</span></div></div>
+    </section>
+
+    <div class="card">
+      <div id="dropzone" class="dropzone" tabindex="0">
+        <div style="font-size: 28px; margin-bottom: 6px;">📄</div>
+        <strong>Drag &amp; drop your PDF resume here</strong> or click to browse
+        <div style="color: var(--muted); font-size: 12px; margin-top: 4px;">Supports text-based PDF files up to 5 MB</div>
+        <input type="file" id="fileInput" accept="application/pdf,.pdf" hidden />
+        <div id="fileChip" class="file-chip" hidden>
+          <span id="fileName"></span>
+          <button type="button" id="removeFile" title="Remove file">&times;</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 22px; font-weight: 700; font-size: 14px;">Select Target Role</div>
+      <div id="roleGrid" class="role-grid"></div>
+
+      <div id="errorNote" class="error-text"></div>
+
+      <div style="margin-top: 24px; display: flex; align-items: center; gap: 14px;">
+        <button type="button" id="analyzeBtn" class="btn btn-primary" disabled>Generate Resume Report</button>
+        <span id="loadingText" style="font-size: 13px; color: var(--muted);" hidden>
+          Analyzing resume &amp; skill gaps (takes ~10 seconds)...
+        </span>
+      </div>
+    </div>
+  <section class="card">
+      <h3 style="font-size:16px;margin-bottom:14px;">How a session works</h3>
+      <ol class="flow-row">
+        <li><span class="flow-n">1</span><div><b>Upload &amp; choose role</b><span>Your PDF and target role</span></div></li>
+        <li><span class="flow-n">2</span><div><b>Resume review</b><span>Score, strengths and fixes</span></div></li>
+        <li><span class="flow-n">3</span><div><b>Skill gaps</b><span>What the role needs that is missing</span></div></li>
+        <li><span class="flow-n">4</span><div><b>Mock interview</b><span>5 questions, scored by voice or text</span></div></li>
+        <li><span class="flow-n">5</span><div><b>Final report</b><span>Scores, insights and next steps</span></div></li>
+      </ol>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+    document.getElementById("historyCount").textContent = getHistory().length;
+
+    let selectedFile = null;
+    let selectedRole = "";
+
+    const roleGrid = document.getElementById("roleGrid");
+    ROLES.forEach(r => {
+      const card = document.createElement("div");
+      card.className = "role-card";
+      card.innerHTML = `<div style="font-size:20px;">${r.icon}</div>
+                        <div class="role-card-title">${r.name}</div>
+                        <div class="role-card-desc">${r.desc}</div>`;
+      card.onclick = () => {
+        selectedRole = r.name;
+        [...roleGrid.children].forEach(c => c.classList.remove("selected"));
+        card.classList.add("selected");
+        refreshBtn();
+      };
+      roleGrid.appendChild(card);
+    });
+
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("fileInput");
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const errorNote = document.getElementById("errorNote");
+
+    dropzone.onclick = e => { if (e.target.id !== "removeFile") fileInput.click(); };
+    fileInput.onchange = () => handleFile(fileInput.files.item(0));
+    ["dragover", "dragenter"].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add("over"); }));
+    ["dragleave", "drop"].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove("over"); }));
+    dropzone.addEventListener("drop", e => handleFile(e.dataTransfer.files.item(0)));
+
+    document.getElementById("removeFile").onclick = e => {
+      e.stopPropagation();
+      selectedFile = null;
+      fileInput.value = "";
+      document.getElementById("fileChip").hidden = true;
+      refreshBtn();
+    };
+
+    function handleFile(f) {
+      errorNote.textContent = "";
+      if (!f) return;
+      if (f.type !== "application/pdf" && !/\.pdf$/i.test(f.name)) {
+        errorNote.textContent = "Please select a valid PDF file.";
+        return;
+      }
+      if (f.size > 5 * 1024 * 1024) {
+        errorNote.textContent = "File exceeds 5 MB. Please upload a smaller PDF.";
+        return;
+      }
+      selectedFile = f;
+      document.getElementById("fileName").textContent = `${f.name} (${(f.size / 1048576).toFixed(1)} MB)`;
+      document.getElementById("fileChip").hidden = false;
+      refreshBtn();
+    }
+
+    function refreshBtn() {
+      analyzeBtn.disabled = !(selectedFile && selectedRole);
+    }
+
+    analyzeBtn.onclick = async () => {
+      errorNote.textContent = "";
+      analyzeBtn.disabled = true;
+      document.getElementById("loadingText").hidden = false;
+
+      const sessionId = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(16).slice(2);
+      const fd = new FormData();
+      fd.append("action", "start");
+      fd.append("sessionId", sessionId);
+      fd.append("role", selectedRole);
+      fd.append("resume", selectedFile, selectedFile.name);
+
+      try {
+        const res = await fetch(WEBHOOK_URL, { method: "POST", body: fd });
+        const raw = await res.text();
+        if (!res.ok) throw new Error(`Workflow error (${res.status}). Check that n8n is active.`);
+
+        let reply = raw;
+        try {
+          const j = JSON.parse(raw);
+          const first = Array.isArray(j) ? j.at(0) : j;
+          reply = (first && (first.reply || first.output || first.text)) || raw;
+        } catch (_) {}
+
+        const { resumeReport, firstQuestion } = splitInitialResponse(reply);
+        const score = extractResumeScore(resumeReport);
+
+        upsertSession({
+          sessionId,
+          role: selectedRole,
+          fileName: selectedFile.name,
+          createdAt: new Date().toLocaleString(),
+          resumeScore: score,
+          resumeReport,
+          firstQuestion,
+          messages: [{ sender: "bot", text: firstQuestion }],
+          interviewStarted: false,
+          interviewCompleted: false
+        });
+
+        window.location.href = "review.html";
+      } catch (err) {
+        errorNote.textContent = err instanceof TypeError
+          ? `Cannot reach n8n at ${WEBHOOK_URL}. Make sure 'n8n start' is running.`
+          : err.message;
+        analyzeBtn.disabled = false;
+        document.getElementById("loadingText").hidden = true;
+      }
+    };
+  </script>
+</body>
+</html>

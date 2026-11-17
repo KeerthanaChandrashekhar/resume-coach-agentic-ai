@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume Coach — Mock Interview</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">RC</div>
+      <div>
+        <div class="brand-title">Resume Coach</div>
+        <div class="brand-sub">AI Career Workspace</div>
+      </div>
+    </div>
+    <a href="index.html" class="nav-link"><span>1. New Analysis</span></a>
+    <a href="review.html" class="nav-link"><span>2. Resume Report</span></a>
+    <a href="interview.html" class="nav-link active"><span>3. Mock Interview</span></a>
+    <a href="profile.html" class="nav-link">
+      <span>My Profile &amp; History</span>
+      <span class="nav-pill" id="historyCount">0</span>
+    </a>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1 id="pageTitle">Mock Interview</h1>
+        <p id="pageMeta">Answer by speaking (auto-sends when you pause) or typing below.</p>
+      </div>
+      <div id="topControls" hidden style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" id="voiceToggleBtn" class="btn btn-outline">🔊 AI Voice: ON</button>
+        <button type="button" id="replayBtn" class="btn btn-outline">↻ Replay Question</button>
+        <button type="button" id="finishBtn" class="btn btn-success">Finish &amp; Save to Profile</button>
+      </div>
+    </div>
+
+    <div id="noSessionCard" class="card" hidden>
+      <p style="color: var(--muted); margin-bottom: 14px;">No active resume session found. Please upload a resume first to start an interview.</p>
+      <a href="index.html" class="btn btn-primary">Go to New Analysis</a>
+    </div>
+
+    <div id="interviewCard" class="card" hidden>
+      <div id="chatBox" class="chat-box"></div>
+      <div id="voiceBanner" class="voice-banner"></div>
+
+      <form id="chatForm" class="input-row">
+        <button type="button" id="micBtn" class="mic-btn">🎙️ Speak</button>
+        <input type="text" id="msgInput" placeholder="Speak your answer or type here..." autocomplete="off" />
+        <button type="submit" id="sendBtn" class="btn btn-primary">Send</button>
+      </form>
+    </div>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+    document.getElementById("historyCount").textContent = getHistory().length;
+    const session = getActiveSession();
+
+    if (!session) {
+      document.getElementById("noSessionCard").hidden = false;
+    } else {
+      session.interviewStarted = true;
+      upsertSession(session);
+
+      document.getElementById("topControls").hidden = false;
+      document.getElementById("interviewCard").hidden = false;
+      document.getElementById("pageTitle").textContent = session.role + " — Mock Interview";
+      document.getElementById("pageMeta").textContent = "Resume: " + session.fileName;
+
+      let voiceEnabled = true;
+      let busy = false;
+      const voiceToggleBtn = document.getElementById("voiceToggleBtn");
+      const voiceBanner = document.getElementById("voiceBanner");
+      const chatBox = document.getElementById("chatBox");
+      const msgInput = document.getElementById("msgInput");
+      const micBtn = document.getElementById("micBtn");
+
+      voiceToggleBtn.onclick = () => {
+        voiceEnabled = !voiceEnabled;
+        voiceToggleBtn.textContent = voiceEnabled ? "🔊 AI Voice: ON" : "🔇 AI Voice: OFF";
+        if (!voiceEnabled && "speechSynthesis" in window) window.speechSynthesis.cancel();
+      };
+
+      function speakQuestion(text, autoListenAfter = false) {
+        if (!voiceEnabled || !("speechSynthesis" in window)) {
+          if (autoListenAfter && voiceEnabled && !session.interviewCompleted) startListening();
+          return;
+        }
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(stripMarkdown(text));
+        utter.rate = 1.02;
+        utter.onstart = () => {
+          voiceBanner.innerHTML = '<span>🔊 Interview Coach is speaking...</span>';
+        };
+        utter.onend = () => {
+          if (!session.interviewCompleted) {
+            voiceBanner.innerHTML = "";
+            if (autoListenAfter && voiceEnabled) startListening();
+          }
+        };
+        window.speechSynthesis.speak(utter);
+      }
+
+      document.getElementById("replayBtn").onclick = () => {
+        const bots = session.messages.filter(m => m.sender === "bot");
+        if (bots.length) speakQuestion(bots.at(-1).text, false);
+      };
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      let listening = false;
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.interimResults = true;
+        recognition.continuous = false;
+
+        recognition.onstart = () => {
+          listening = true;
+          micBtn.classList.add("listening");
+          micBtn.textContent = "⏹ Listening...";
+          voiceBanner.innerHTML = '<span class="pulse-dot"></span> <span>Listening... speak now (auto-sends when you pause)</span>';
+        };
+
+        recognition.onresult = e => {
+          let transcript = "";
+          for (let i = 0; i < e.results.length; i++) {
+            transcript += e.results.item(i).item(0).transcript;
+          }
+          msgInput.value = transcript;
+        };
+
+        recognition.onend = () => {
+          listening = false;
+          micBtn.classList.remove("listening");
+          micBtn.textContent = "🎙️ Speak";
+          if (!session.interviewCompleted) voiceBanner.innerHTML = "";
+          const spoken = msgInput.value.trim();
+          if (spoken && !busy && !session.interviewCompleted) sendAnswer(spoken);
+        };
+
+        recognition.onerror = () => {
+          listening = false;
+          micBtn.classList.remove("listening");
+          micBtn.textContent = "🎙️ Speak";
+          if (!session.interviewCompleted) voiceBanner.innerHTML = "";
+        };
+
+        micBtn.onclick = () => {
+          if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+          if (listening) recognition.stop();
+          else startListening();
+        };
+      } else {
+        micBtn.disabled = true;
+        micBtn.title = "Use Chrome or Edge for voice input";
+      }
+
+      function startListening() {
+        if (!recognition || listening || busy || session.interviewCompleted) return;
+        try { recognition.start(); } catch (_) {}
+      }
+
+      function addBubble(sender, text, isErr = false) {
+        const div = document.createElement("div");
+        div.className = isErr ? "msg err" : "msg " + sender;
+        div.innerHTML = isErr ? text : renderMarkdown(text);
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return div;
+      }
+
+      function showCompletedBanner() {
+        document.getElementById("chatForm").hidden = true;
+        voiceBanner.innerHTML =
+          '<span style="color: var(--success); font-size: 14px;">✅ Interview Completed &amp; Saved to Your Profile!</span>' +
+          '<a href="profile.html" class="btn btn-success btn-sm" style="margin-left: 10px;">View &amp; Download Report →</a>';
+      }
+
+      session.messages.forEach(m => addBubble(m.sender, m.text));
+
+      if (session.interviewCompleted) {
+        showCompletedBanner();
+      } else {
+        const latestBot = [...session.messages].reverse().find(m => m.sender === "bot");
+        if (latestBot) speakQuestion(latestBot.text, true);
+      }
+
+      document.getElementById("chatForm").onsubmit = e => {
+        e.preventDefault();
+        const text = msgInput.value.trim();
+        if (text && !busy && !session.interviewCompleted) sendAnswer(text);
+      };
+
+      async function sendAnswer(text) {
+        busy = true;
+        msgInput.value = "";
+        document.getElementById("sendBtn").disabled = true;
+
+        addBubble("me", text);
+        session.messages.push({ sender: "me", text });
+        upsertSession(session);
+
+        const waitBubble = addBubble("bot", "Evaluating answer...");
+        const fd = new FormData();
+        fd.append("action", "chat");
+        fd.append("sessionId", session.sessionId);
+        fd.append("message", text);
+
+        try {
+          const res = await fetch(WEBHOOK_URL, { method: "POST", body: fd });
+          const raw = await res.text();
+          if (!res.ok) throw new Error("Workflow error (" + res.status + ").");
+
+          let reply = raw;
+          try {
+            const j = JSON.parse(raw);
+            const first = Array.isArray(j) ? j.at(0) : j;
+            reply = (first && (first.reply || first.output || first.text)) || raw;
+          } catch (_) {}
+
+          reply = String(reply);
+          waitBubble.innerHTML = renderMarkdown(reply);
+          session.messages.push({ sender: "bot", text: reply });
+
+          if (/final report|interview average|overall score|interview summary/i.test(reply)) {
+            session.interviewCompleted = true;
+            upsertSession(session);
+            busy = false;
+            showCompletedBanner();
+            speakQuestion(reply, false);
+            return;
+          }
+
+          upsertSession(session);
+          busy = false;
+          document.getElementById("sendBtn").disabled = false;
+          speakQuestion(reply, true);
+        } catch (err) {
+          waitBubble.className = "msg err";
+          waitBubble.textContent = err.message;
+          busy = false;
+          document.getElementById("sendBtn").disabled = false;
+        }
+      }
+
+      document.getElementById("finishBtn").onclick = () => {
+        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+        if (recognition && listening) recognition.stop();
+        session.interviewCompleted = true;
+        upsertSession(session);
+        window.location.href = "profile.html";
+      };
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+{
+  "Data Analyst": {
+    "required": [
+      "SQL",
+      "Excel",
+      "Python (pandas)",
+      "Data cleaning",
+      "Data visualization (Power BI or Tableau)",
+      "Basic statistics"
+    ],
+    "nice_to_have": [
+      "Storytelling with data",
+      "A/B testing",
+      "Git",
+      "Cloud basics"
+    ],
+    "interview_topics": [
+      "SQL joins and aggregations",
+      "Handling missing data",
+      "Choosing the right chart",
+      "Explaining insights to non-technical people"
+    ]
+  },
+  "AI/ML Engineer": {
+    "required": [
+      "Python",
+      "Machine learning fundamentals",
+      "scikit-learn",
+      "Deep learning basics (PyTorch or TensorFlow)",
+      "Model evaluation metrics",
+      "Git"
+    ],
+    "nice_to_have": [
+      "MLOps basics",
+      "Docker",
+      "LLMs and prompt engineering",
+      "Cloud ML services"
+    ],
+    "interview_topics": [
+      "Overfitting and regularization",
+      "Choosing evaluation metrics",
+      "Bias-variance tradeoff",
+      "Deploying a model"
+    ]
+  },
+  "Software Developer": {
+    "required": [
+      "One main language (Java, Python, C++ or JavaScript)",
+      "Data structures and algorithms",
+      "OOP",
+      "Git",
+      "SQL or databases",
+      "Debugging and testing"
+    ],
+    "nice_to_have": [
+      "System design basics",
+      "REST APIs",
+      "CI/CD",
+      "Cloud basics"
+    ],
+    "interview_topics": [
+      "Time and space complexity",
+      "OOP principles",
+      "Writing clean, testable code",
+      "Explaining a project end to end"
+    ]
+  },
+  "Web Developer": {
+    "required": [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "A framework (React or similar)",
+      "Git",
+      "REST APIs",
+      "Responsive design"
+    ],
+    "nice_to_have": [
+      "Node.js",
+      "Databases",
+      "TypeScript",
+      "Testing",
+      "Deployment"
+    ],
+    "interview_topics": [
+      "How the browser renders a page",
+      "Async JavaScript and promises",
+      "State management",
+      "Making a site accessible and fast"
+    ]
+  },
+  "Data Scientist": {
+    "required": [
+      "Python",
+      "Statistics and probability",
+      "Machine learning",
+      "SQL",
+      "Data visualization",
+      "Experiment design"
+    ],
+    "nice_to_have": [
+      "Big data tools",
+      "Deep learning",
+      "Cloud platforms",
+      "Communicating results"
+    ],
+    "interview_topics": [
+      "Hypothesis testing",
+      "Feature engineering",
+      "Model selection and validation",
+      "Turning a business question into an analysis"
+    ]
+  },
+  "Cloud Engineer": {
+    "required": [
+      "One cloud platform (Azure, AWS or GCP)",
+      "Linux and networking basics",
+      "Infrastructure as code basics",
+      "Docker",
+      "Git",
+      "Security and identity basics"
+    ],
+    "nice_to_have": [
+      "Kubernetes",
+      "CI/CD pipelines",
+      "Monitoring and logging",
+      "Cost management"
+    ],
+    "interview_topics": [
+      "IaaS vs PaaS vs SaaS",
+      "Virtual networks and security groups",
+      "Containers vs virtual machines",
+      "High availability and scaling"
+    ]
+  }
+}

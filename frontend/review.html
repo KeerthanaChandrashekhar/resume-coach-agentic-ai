@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume Coach — Resume Report</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">RC</div>
+      <div>
+        <div class="brand-title">Resume Coach</div>
+        <div class="brand-sub">AI Career Workspace</div>
+      </div>
+    </div>
+    <a href="index.html" class="nav-link"><span>1. New Analysis</span></a>
+    <a href="review.html" class="nav-link active"><span>2. Resume Report</span></a>
+    <a href="interview.html" class="nav-link"><span>3. Mock Interview</span></a>
+    <a href="profile.html" class="nav-link">
+      <span>My Profile &amp; History</span>
+      <span class="nav-pill" id="historyCount">0</span>
+    </a>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>Resume Review &amp; Skill Gaps</h1>
+        <p id="reportMeta">Review your resume score and missing skills before deciding whether to take the mock interview.</p>
+      </div>
+      <div class="no-print" id="actionBar" hidden style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" id="downloadResumeMd" class="btn btn-outline">⬇ Download Resume Report (.md)</button>
+        <button type="button" id="printResumePdf" class="btn btn-outline">🖨 Save Resume PDF</button>
+        <a href="interview.html" id="startInterviewBtn" class="btn btn-primary">🎙️ Take Mock Interview →</a>
+      </div>
+    </div>
+
+    <div id="emptyCard" class="card" hidden>
+      <p style="color: var(--muted); margin-bottom: 14px;">No resume has been analyzed yet. Upload a resume first or view past reports in your Profile.</p>
+      <a href="index.html" class="btn btn-primary">Upload Resume</a>
+    </div>
+
+    <div id="reportCard" class="card" hidden>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+        <span class="badge badge-blue" id="roleBadge"></span>
+        <span class="badge badge-green" id="scoreBadge" hidden></span>
+      </div>
+      <div id="resumeBody" class="md-content"></div>
+
+      <div class="no-print" style="margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="font-size: 13px; color: var(--muted);">
+          Ready to practice? Your mock interview will ask 5 role-specific questions with voice or text.
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <a href="profile.html" class="btn btn-outline">Skip Interview &amp; Save to Profile</a>
+          <a href="interview.html" class="btn btn-success">Start Mock Interview Now →</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+    // Ensure zero voice plays on the Resume Report page
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+
+    document.getElementById("historyCount").textContent = getHistory().length;
+    const session = getActiveSession();
+
+    if (!session) {
+      document.getElementById("emptyCard").hidden = false;
+    } else {
+      document.getElementById("actionBar").hidden = false;
+      document.getElementById("reportCard").hidden = false;
+      document.getElementById("reportMeta").textContent = `File: ${session.fileName} · Analyzed on ${session.createdAt}`;
+      document.getElementById("roleBadge").textContent = `Target Role: ${session.role}`;
+
+      if (session.resumeScore !== null) {
+        const sb = document.getElementById("scoreBadge");
+        sb.textContent = `Resume Score: ${session.resumeScore}/100`;
+        sb.hidden = false;
+      }
+
+      document.getElementById("resumeBody").innerHTML = renderMarkdown(session.resumeReport);
+
+      if (session.interviewCompleted) {
+        document.getElementById("startInterviewBtn").textContent = "View Interview Transcript →";
+      }
+
+      document.getElementById("downloadResumeMd").onclick = () => {
+        const md = [
+          `# Resume Review & Skill Gap Report`,
+          `- **Target Role:** ${session.role}`,
+          `- **Resume File:** ${session.fileName}`,
+          `- **Date:** ${session.createdAt}`,
+          session.resumeScore !== null ? `- **Score:** ${session.resumeScore}/100` : ``,
+          ``,
+          session.resumeReport
+        ].filter(Boolean).join("\n");
+        downloadMarkdownFile(`${session.role.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-resume-report.md`, md);
+      };
+
+      document.getElementById("printResumePdf").onclick = () => window.print();
+    }
+  </script>
+</body>
+</html>

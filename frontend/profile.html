@@ -1,0 +1,241 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume Coach — My Profile &amp; History</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-badge">RC</div>
+      <div>
+        <div class="brand-title">Resume Coach</div>
+        <div class="brand-sub">AI Career Workspace</div>
+      </div>
+    </div>
+    <a href="index.html" class="nav-link"><span>1. New Analysis</span></a>
+    <a href="review.html" class="nav-link"><span>2. Resume Report</span></a>
+    <a href="interview.html" class="nav-link"><span>3. Mock Interview</span></a>
+    <a href="profile.html" class="nav-link active">
+      <span>My Profile &amp; History</span>
+      <span class="nav-pill" id="historyCount">0</span>
+    </a>
+  </aside>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1>My Profile &amp; Career Insights</h1>
+        <p>Track all your resume reviews, completed mock interviews, and download reports anytime.</p>
+      </div>
+      <div class="no-print" style="display: flex; gap: 10px;">
+        <a href="index.html" class="btn btn-primary">+ New Resume Analysis</a>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Resumes Analyzed</div>
+        <div class="stat-value" id="statResumes">0</div>
+        <div class="stat-sub" id="statAvgScore">No scores recorded yet</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Interviews Taken</div>
+        <div class="stat-value" id="statInterviews">0</div>
+        <div class="stat-sub" id="statQuestionsAnswered">0 total answers submitted</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top Target Role</div>
+        <div class="stat-value" id="statTopRole" style="font-size: 20px; margin-top: 10px;">—</div>
+        <div class="stat-sub">Most practiced career track</div>
+      </div>
+    </div>
+
+    <div class="card" id="insightsCard" hidden>
+      <h3 style="font-size: 16px; margin-bottom: 10px;">💡 Progress Insights</h3>
+      <div id="insightsBody" style="font-size: 14px; line-height: 1.6; color: var(--text);"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size: 16px; margin-bottom: 14px;">All Past Sessions &amp; Reports</h3>
+      <div id="emptyHistory" style="color: var(--muted); font-size: 14px;" hidden>
+        No sessions yet. Upload your first resume to start tracking your progress!
+      </div>
+      <div id="historyList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    </div>
+
+    <div class="card" id="detailViewer" hidden>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+        <div>
+          <h3 id="viewerTitle" style="font-size: 18px;"></h3>
+          <div id="viewerSub" style="font-size: 13px; color: var(--muted);"></div>
+        </div>
+        <div class="no-print" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" id="dlResumeOnlyBtn" class="btn btn-outline btn-sm">⬇ Resume Report Only (.md)</button>
+          <button type="button" id="dlFullReportBtn" class="btn btn-primary btn-sm" hidden>⬇ Full Resume + Interview (.md)</button>
+          <button type="button" id="printViewerBtn" class="btn btn-outline btn-sm">🖨 Save PDF</button>
+        </div>
+      </div>
+
+      <h4 style="margin-bottom: 8px; color: var(--primary);">1. Resume Review &amp; Skill Gaps</h4>
+      <div id="viewerResume" class="md-content"></div>
+
+      <div id="viewerInterviewWrap" hidden style="margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);">
+        <h4 style="margin-bottom: 10px; color: var(--success);">2. Mock Interview Transcript &amp; Feedback</h4>
+        <div id="viewerInterview" class="md-content"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+
+    function saveMarkdownFile(name, content) {
+      const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = name; link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => { link.remove(); URL.revokeObjectURL(url); }, 1500);
+    }
+
+    const history = getHistory();
+    document.getElementById("historyCount").textContent = history.length;
+    document.getElementById("statResumes").textContent = history.length;
+
+    const interviewsTaken = history.filter(s => s.interviewStarted || (s.messages && s.messages.length > 1));
+    document.getElementById("statInterviews").textContent = interviewsTaken.length;
+
+    const totalAnswers = history.reduce((acc, s) => acc + (s.messages || []).filter(m => m.sender === "me").length, 0);
+    document.getElementById("statQuestionsAnswered").textContent = totalAnswers + " total answers submitted";
+
+    const scored = history.map(s => s.resumeScore).filter(n => typeof n === "number");
+    if (scored.length) {
+      const avg = Math.round(scored.reduce((a, b) => a + b, 0) / scored.length);
+      document.getElementById("statAvgScore").textContent = "Average score: " + avg + "/100";
+    }
+
+    if (history.length > 0) {
+      const roleCounts = {};
+      history.forEach(s => { roleCounts[s.role] = (roleCounts[s.role] || 0) + 1; });
+      const sortedRoles = Object.entries(roleCounts).sort((a, b) => b.at(1) - a.at(1));
+      document.getElementById("statTopRole").textContent = sortedRoles.at(0).at(0);
+
+      const insightsCard = document.getElementById("insightsCard");
+      insightsCard.hidden = false;
+      const resumeOnlyCount = history.length - interviewsTaken.length;
+      document.getElementById("insightsBody").innerHTML =
+        "• You have analyzed <b>" + history.length + "</b> resume(s) and completed <b>" + interviewsTaken.length + "</b> mock interview(s).<br>" +
+        "• " + (resumeOnlyCount > 0
+          ? "You have <b>" + resumeOnlyCount + "</b> resume analysis session(s) without a mock interview yet—click any session below to practice or download its report."
+          : "Great consistency! You followed up every resume review with a mock interview");
+    }
+
+    const historyList = document.getElementById("historyList");
+    if (history.length === 0) {
+      document.getElementById("emptyHistory").hidden = false;
+    } else {
+      history.forEach(s => {
+        const hasInterview = s.interviewStarted || (s.messages && s.messages.length > 1);
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:14px 16px; border:1px solid var(--border); border-radius:10px; background:#f8fafc;";
+        row.innerHTML =
+          '<div>' +
+            '<div style="font-weight:700; font-size:15px;">' + s.role + ' <span style="font-weight:400; color:var(--muted);">(' + s.fileName + ')</span></div>' +
+            '<div style="font-size:12px; color:var(--muted); margin-top:3px;">' +
+              s.createdAt + ' · ' +
+              (hasInterview ? '<span class="badge badge-green">Resume + Interview</span>' : '<span class="badge badge-blue">Resume Report Only</span>') +
+              (s.resumeScore !== null && s.resumeScore !== undefined ? ' · Score: <b>' + s.resumeScore + '/100</b>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex; gap:8px;">' +
+            '<button type="button" class="btn btn-outline btn-sm view-btn">View &amp; Download</button>' +
+            (!hasInterview ? '<button type="button" class="btn btn-primary btn-sm take-btn">Take Interview</button>' : '') +
+          '</div>';
+
+        row.querySelector(".view-btn").onclick = () => {
+          openViewer(s);
+          document.getElementById("detailViewer").scrollIntoView({ behavior: "smooth", block: "start" });
+        };
+        const takeBtn = row.querySelector(".take-btn");
+        if (takeBtn) {
+          takeBtn.onclick = () => {
+            setActiveSessionId(s.sessionId);
+            window.location.href = "interview.html";
+          };
+        }
+        historyList.appendChild(row);
+      });
+
+      openViewer(getActiveSession() || history.at(0));
+    }
+
+    function openViewer(s) {
+      if (!s) return;
+      setActiveSessionId(s.sessionId);
+      const viewer = document.getElementById("detailViewer");
+      viewer.hidden = false;
+      document.getElementById("viewerTitle").textContent = s.role + " — Complete Report";
+      document.getElementById("viewerSub").textContent = "File: " + s.fileName + " · Saved: " + s.createdAt;
+      document.getElementById("viewerResume").innerHTML = renderMarkdown(s.resumeReport);
+
+      const hasInterview = s.interviewStarted || (s.messages && s.messages.length > 1);
+      const interviewWrap = document.getElementById("viewerInterviewWrap");
+      const dlFullBtn = document.getElementById("dlFullReportBtn");
+
+      if (hasInterview) {
+        interviewWrap.hidden = false;
+        dlFullBtn.hidden = false;
+        document.getElementById("viewerInterview").innerHTML = (s.messages || []).map(m =>
+          '<div style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border);">' +
+            '<strong style="color:' + (m.sender === "me" ? "var(--primary)" : "var(--sidebar)") + ';">' + (m.sender === "me" ? "Your Answer" : "Interview Coach") + ':</strong>' +
+            '<div style="margin-top:4px;">' + renderMarkdown(m.text) + '</div>' +
+          '</div>'
+        ).join("");
+      } else {
+        interviewWrap.hidden = true;
+        dlFullBtn.hidden = true;
+      }
+
+      const slug = s.role.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+      document.getElementById("dlResumeOnlyBtn").onclick = () => {
+        const md = [
+          "# Resume Review & Skill Gap Report",
+          "- **Target Role:** " + s.role,
+          "- **Resume:** " + s.fileName,
+          "- **Date:** " + s.createdAt,
+          "",
+          s.resumeReport
+        ].join("\n");
+        saveMarkdownFile(slug + "-resume-only-report.md", md);
+      };
+
+      dlFullBtn.onclick = () => {
+      const qaLines = (s.messages || []).map(m =>
+"### " + (m.sender === "me" ? "Candidate Answer" : "Interview Coach") + "\n" + m.text + "\n"
+);
+const md = [
+"# Complete Resume & Mock Interview Report",
+"- Target Role: " + s.role,
+"- Resume: " + s.fileName,
+"- Date: " + s.createdAt,
+"",
+"## 1. Resume Review & Skill Gap Analysis",
+s.resumeReport,
+"",
+"## 2. Mock Interview Transcript & Evaluation",
+...qaLines
+].join("\n");
+saveMarkdownFile(slug + "-full-interview-report.md", md);
+};
+document.getElementById("printViewerBtn").onclick = () => window.print();
+}
+  </script>
+</body>
+</html>
